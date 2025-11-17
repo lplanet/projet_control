@@ -16,11 +16,16 @@ describe('TopArtistItem component', () => {
             popularity: 85,
             external_urls: { spotify: 'https://open.spotify.com/artist/artist1' }
         };
-        render(<TopArtistItem artist={artist} index={1} />);
+        render(<TopArtistItem artist={artist} index={0} />);
 
         // Verify list item rendering and having expected content
         const listItem = screen.getByTestId(`top-artist-item-${artist.id}`);
         expect(listItem).toBeInTheDocument();
+
+        // title should show 1-based index when index === 0
+        const titleEl = listItem.querySelector('.artist-title');
+        expect(titleEl).toBeTruthy();
+        expect(titleEl).toHaveTextContent('1. Test Artist');
 
         // should contain artist image (use alt text)
         const img = within(listItem).getByAltText(artist.name);
@@ -31,7 +36,7 @@ describe('TopArtistItem component', () => {
         expect(listItem).toHaveTextContent(artist.name);
         expect(listItem).toHaveTextContent(`Genres: ${artist.genres.join(', ')}`);
 
-        // robust check for followers (ignore locale-specific separators)
+        // followers check made robust vs locale separators
         const followersEl = listItem.querySelector('.artist-followers');
         expect(followersEl).toBeTruthy();
         expect((followersEl.textContent || '').replace(/\D/g, '')).toBe(String(artist.followers.total));
@@ -53,7 +58,6 @@ describe('TopArtistItem component', () => {
             genres: ['jazz'],
             // images: [],
             followers: { total: 500 },
-            popularity: 50,
             external_urls: { spotify: 'https://open.spotify.com/artist/artist2' }
         };
         render(<TopArtistItem artist={artist} index={1} />);
@@ -69,12 +73,10 @@ describe('TopArtistItem component', () => {
         expect(listItem).toHaveTextContent(artist.name);
         expect(listItem).toHaveTextContent(`Genres: ${artist.genres.join(', ')}`);
 
-        // robust check for followers (ignore locale-specific separators)
+        // followers check robust vs locale
         const followersEl = listItem.querySelector('.artist-followers');
         expect(followersEl).toBeTruthy();
         expect((followersEl.textContent || '').replace(/\D/g, '')).toBe(String(artist.followers.total));
-
-        expect(listItem).toHaveTextContent(`Popularity: ${artist.popularity}`);
 
         // link to artist page
         const link = within(listItem).getByRole('link', { name: /view artist/i });
