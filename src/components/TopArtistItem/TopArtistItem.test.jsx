@@ -71,7 +71,7 @@ describe('TopArtistItem component', () => {
             popularity: 10,
             external_urls: { spotify: 'https://open.spotify.com/artist/artist3' }
         };
-        render(<TopArtistItem artist={artist} index={2} />);
+        render(<TopArtistItem artist={artist} index={1} />);
 
         const listItem = screen.getByTestId(`top-artist-item-${artist.id}`);
         // query the title element directly to avoid matching other content in the list item
