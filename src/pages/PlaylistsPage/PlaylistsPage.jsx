@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 /**
  * Number of playlists to fetch
  */
-export const limit = 10;
+export const limit = 50;
 
 /**
  * Playlists Page
@@ -34,6 +34,8 @@ export default function PlaylistsPage() {
   // Set document title
   useEffect(() => { document.title = buildTitle('Playlists'); }, []);
 
+  // derived count (null while loading)
+  const playlistsCount = !loading ? playlists.length : null;
 
   useEffect(() => {
     if (!token) return; // wait for auth check
@@ -54,7 +56,11 @@ export default function PlaylistsPage() {
   return (
     <section className="playlists-container page-container" aria-labelledby="playlists-title">
       <h1 id="playlists-title" className="playlists-title page-title">Your Playlists</h1>
-      <h2 className="playlists-count">{limit} Playlists</h2>
+      <h2 className="playlists-count">
+        {playlistsCount !== null
+          ? `${playlistsCount} ${playlistsCount === 1 ? 'Playlist' : 'Playlists'}`
+          : 'Playlists'}
+      </h2>
       {loading && <output className="playlists-loading" data-testid="loading-indicator">Loading playlists…</output>}
       {error && !loading && <div className="playlists-error" role="alert">{error}</div>}
       {!loading && !error && (
