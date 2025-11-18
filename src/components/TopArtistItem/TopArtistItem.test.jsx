@@ -81,7 +81,7 @@ describe('TopArtistItem component', () => {
             external_urls: { spotify: 'https://open.spotify.com/artist/artist1' }
         };
         render(<TopArtistItem artist={artist} index={0} />);
-        const listItem = screen.getByTestId(top-artist-item-${artist.id});
+        const listItem = screen.getByTestId(`top-artist-item-${artist.id}`);
         expect(listItem).toHaveTextContent('1. Test Artist'); 
     });
 });
