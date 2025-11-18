@@ -43,4 +43,4 @@ export default function TopArtistItem({ artist, index }) {
       </a>
     </li>
   );
-}
+} 

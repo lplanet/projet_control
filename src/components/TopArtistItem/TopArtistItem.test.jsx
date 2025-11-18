@@ -1,4 +1,3 @@
-// src/components/PlayListItem.test.jsx
 
 import { describe, expect, test } from '@jest/globals'
 import '@testing-library/jest-dom';
@@ -12,7 +11,7 @@ describe('TopArtistItem component', () => {
             name: 'Test Artist',
             images: [{ url: 'test.jpg' }, { url: 'test-medium.jpg' }, { url: 'test-small.jpg' }],
             genres: ['pop', 'rock'],
-            followers: { total: 1000 },
+            followers: { total: 100 },
             popularity: 85,
             external_urls: { spotify: 'https://open.spotify.com/artist/artist1' }
         };
@@ -22,11 +21,6 @@ describe('TopArtistItem component', () => {
         const listItem = screen.getByTestId(`top-artist-item-${artist.id}`);
         expect(listItem).toBeInTheDocument();
 
-        // title should show 1-based index when index === 0
-        const titleEl = listItem.querySelector('.artist-title');
-        expect(titleEl).toBeTruthy();
-        expect(titleEl).toHaveTextContent('1. Test Artist');
-
         // should contain artist image (use alt text)
         const img = within(listItem).getByAltText(artist.name);
         expect(img).toBeInTheDocument();
@@ -35,12 +29,7 @@ describe('TopArtistItem component', () => {
         // details assertions
         expect(listItem).toHaveTextContent(artist.name);
         expect(listItem).toHaveTextContent(`Genres: ${artist.genres.join(', ')}`);
-
-        // followers check made robust vs locale separators
-        const followersEl = listItem.querySelector('.artist-followers');
-        expect(followersEl).toBeTruthy();
-        expect((followersEl.textContent || '').replace(/\D/g, '')).toBe(String(artist.followers.total));
-
+        expect(listItem).toHaveTextContent(`Followers: ${artist.followers.total.toLocaleString()}`);
         expect(listItem).toHaveTextContent(`Popularity: ${artist.popularity}`);
 
         // link to artist page
@@ -72,11 +61,7 @@ describe('TopArtistItem component', () => {
         // details assertions
         expect(listItem).toHaveTextContent(artist.name);
         expect(listItem).toHaveTextContent(`Genres: ${artist.genres.join(', ')}`);
-
-        // followers check robust vs locale
-        const followersEl = listItem.querySelector('.artist-followers');
-        expect(followersEl).toBeTruthy();
-        expect((followersEl.textContent || '').replace(/\D/g, '')).toBe(String(artist.followers.total));
+        expect(listItem).toHaveTextContent(`Followers: ${artist.followers.total.toLocaleString()}`);
 
         // link to artist page
         const link = within(listItem).getByRole('link', { name: /view artist/i });
@@ -84,5 +69,19 @@ describe('TopArtistItem component', () => {
 
         // uncomment to debug
         //screen.debug();
+    });
+    test('affiche l \'index en commençant à 1 (index 0 → 1)', () => {
+            const artist = {
+            id: 'artist1',
+            name: 'Test Artist',
+            images: [{ url: 'test.jpg' }, { url: 'test-medium.jpg' }],
+            genres: ['pop'],
+            followers: { total: 100 },
+            popularity: 50,
+            external_urls: { spotify: 'https://open.spotify.com/artist/artist1' }
+        };
+        render(<TopArtistItem artist={artist} index={0} />);
+        const listItem = screen.getByTestId(top-artist-item-${artist.id});
+        expect(listItem).toHaveTextContent('1. Test Artist'); 
     });
 });
