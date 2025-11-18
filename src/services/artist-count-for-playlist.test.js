@@ -62,4 +62,50 @@ describe("artistCountForPlaylist", () => {
 
     consoleSpy.mockRestore();
   });
+
+  test("handles response with tracks at top level (res.tracks.items)", async () => {
+    fetchPlaylistById.mockResolvedValue({
+      tracks: makePlaylist([
+        { name: "S1", artists: ["A"] },
+        { name: "S2", artists: ["B", "A"] },
+      ]).tracks,
+    });
+
+    const result = await artistCountForPlaylist("t", "p");
+    expect(result).toEqual({ A: 2, B: 1 });
+  });
+
+  test("handles response with items at top level (res.items)", async () => {
+    fetchPlaylistById.mockResolvedValue({
+      items: [
+        { artists: [{ name: "X" }] },
+        { artists: [{ name: "Y" }, { name: "X" }] },
+      ],
+    });
+
+    const result = await artistCountForPlaylist("t", "p");
+    expect(result).toEqual({ X: 2, Y: 1 });
+  });
+
+  test("handles items with null track and artists without name", async () => {
+    fetchPlaylistById.mockResolvedValue({
+      data: {
+        tracks: {
+          items: [
+            { track: null },
+            { track: { artists: [{}, { name: "Z" }] } },
+          ],
+        },
+      },
+    });
+
+    const result = await artistCountForPlaylist("t", "p");
+    expect(result).toEqual({ "Unknown Artist": 1, Z: 1 });
+  });
+
+  test("returns empty object when no items present", async () => {
+    fetchPlaylistById.mockResolvedValue({});
+    const result = await artistCountForPlaylist("t", "p");
+    expect(result).toEqual({});
+  });
 });
