@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me';
 import { useRequireToken } from '../../hooks/useRequireToken';
+import SimpleCard from '../../components/SimpleCard/SimpleCard.jsx';
+import './DashboardPage.css';
 
 export default function Dashboard() {
   const { token } = useRequireToken();
@@ -21,7 +23,6 @@ export default function Dashboard() {
       setError(null);
       setLoading(true);
       try {
-        // fetch artists + tracks in parallel
         const [artistsRes, tracksRes] = await Promise.all([
           fetchUserTopArtists(token),
           fetchUserTopTracks(token)
@@ -32,7 +33,7 @@ export default function Dashboard() {
         const artistsData = artistsRes?.data ?? artistsRes;
         const tracksData = tracksRes?.data ?? tracksRes;
 
-        // debug logs: full payloads and first items
+        // debug logs
         // eslint-disable-next-line no-console
         console.log('fetchUserTopArtists result:', artistsData);
         // eslint-disable-next-line no-console
@@ -68,16 +69,25 @@ export default function Dashboard() {
   const topArtist = topArtists?.items?.[0] ?? null;
   const topTrack = topTracks?.items?.[0] ?? null;
 
-  if (loading) return <div>Loading…</div>;
+  if (loading) return <div className="dashboard-loading" data-testid="loading">Loading…</div>;
   if (error) return (
-    <div role="alert">
+    <div className="dashboard-error" role="alert">
       {error} {error?.toLowerCase().includes('login') && <Link to="/login">Se connecter</Link>}
     </div>
   );
 
+  const artistSubtitle = topArtist
+    ? (Array.isArray(topArtist.genres) && topArtist.genres.length ? topArtist.genres.join(', ') : `Followers: ${topArtist.followers?.total ?? '—'}`)
+    : '';
+
+  const trackSubtitle = topTrack
+    ? (Array.isArray(topTrack.artists) ? topTrack.artists.map(a => a.name).join(', ') : '')
+    : '';
+
   return (
     <div className="dashboard-container">
       <h1>Dashboard</h1>
+      <p className="dashboard-subtitle">Your top artist and track</p>
 
       <section className="dashboard-content" aria-labelledby="top-artist-title">
         <div className="card">
@@ -85,19 +95,12 @@ export default function Dashboard() {
           {!topArtist ? (
             <p>Aucun artiste trouvé.</p>
           ) : (
-            <>
-              {topArtist.images?.[0]?.url && (
-                // eslint-disable-next-line jsx-a11y/img-redundant-alt
-                <img src={topArtist.images[0].url} alt={`${topArtist.name} image`} style={{ width: 200, height: 'auto', borderRadius: 8 }} />
-              )}
-              <h3>{topArtist.name}</h3>
-              {Array.isArray(topArtist.genres) && topArtist.genres.length > 0 ? (
-                <p>Genres: {topArtist.genres.join(', ')}</p>
-              ) : (
-                <p>Genres: —</p>
-              )}
-              <p>Followers: {topArtist.followers?.total ?? '—'}</p>
-            </>
+            <SimpleCard
+              imageUrl={topArtist.images?.[0]?.url}
+              title={topArtist.name}
+              subtitle={artistSubtitle}
+              link={topArtist.external_urls?.spotify}
+            />
           )}
         </div>
 
@@ -106,24 +109,17 @@ export default function Dashboard() {
           {!topTrack ? (
             <p>Aucun titre trouvé.</p>
           ) : (
-            <>
-              {topTrack.album?.images?.[0]?.url && (
-                <img src={topTrack.album.images[0].url} alt={`${topTrack.name} cover`} style={{ width: 200, height: 'auto', borderRadius: 8 }} />
-              )}
-              <h3>{topTrack.name}</h3>
-              <p>
-                Artiste(s): {Array.isArray(topTrack.artists) ? topTrack.artists.map(a => a.name).join(', ') : '—'}
-              </p>
-              <p>Album: {topTrack.album?.name ?? '—'}</p>
-            </>
+            <SimpleCard
+              imageUrl={topTrack.album?.images?.[0]?.url}
+              title={topTrack.name}
+              subtitle={`${trackSubtitle}${topTrack.album?.name ? ' — ' + topTrack.album.name : ''}`}
+              link={topTrack.external_urls?.spotify}
+            />
           )}
         </div>
       </section>
 
-      <section style={{ marginTop: 16 }}>
-        <h3>Raw response (console)</h3>
-        <p>Les données complètes sont affichées dans la console (fetchUserTopArtists / fetchUserTopTracks).</p>
-      </section>
+
     </div>
   );
 }
