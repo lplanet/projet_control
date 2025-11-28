@@ -1,88 +1,117 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me.js';
-import { useRequireToken } from '../../hooks/useRequireToken.js';
 import SimpleCard from '../../components/SimpleCard/SimpleCard.jsx';
+import { KEY_ACCESS_TOKEN } from '../../constants/storageKeys.js';
+import { buildTitle } from '../../constants/appMeta.js';
 import './DashboardPage.css';
 
-export default function Dashboard() {
-  const { token } = useRequireToken();
+export default function DashboardPage() {
+  const navigate = useNavigate();
   const [topArtists, setTopArtists] = useState(null);
   const [topTracks, setTopTracks] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  const [loadingArtists, setLoadingArtists] = useState(true);
+  const [loadingTracks, setLoadingTracks] = useState(true);
+
+  const [errorArtists, setErrorArtists] = useState(null);
+  const [errorTracks, setErrorTracks] = useState(null);
 
   useEffect(() => {
+    document.title = buildTitle('Dashboard');
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = window.localStorage.getItem(KEY_ACCESS_TOKEN);
+
     if (!token) {
-      setError('Missing access token. Please login.');
+      setErrorArtists('Missing access token');
+      setErrorTracks('Missing access token');
+      setLoadingArtists(false);
+      setLoadingTracks(false);
       return;
     }
 
-    let cancelled = false;
     (async () => {
-      setError(null);
-      setLoading(true);
-      try {
-        const [artistsRes, tracksRes] = await Promise.all([
-          fetchUserTopArtists(token),
-          fetchUserTopTracks(token)
-        ]);
+      // fetch artists
+      (async () => {
+        try {
+          const res = await fetchUserTopArtists(token);
+          if (cancelled) return;
+          const data = res?.data ?? res;
+          if (!data) {
+            setErrorArtists('Empty response from fetchUserTopArtists');
+          } else if (data.error) {
+            const msg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+            setErrorArtists(msg);
+            if (msg.toLowerCase().includes('access token')) navigate('/login');
+          } else {
+            setTopArtists(data);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          setErrorArtists(err?.message ?? String(err));
+        } finally {
+          if (!cancelled) setLoadingArtists(false);
+        }
+      })();
 
-        if (cancelled) return;
-
-        const artistsData = artistsRes?.data ?? artistsRes;
-        const tracksData = tracksRes?.data ?? tracksRes;
-
-        // debug logs
-        // eslint-disable-next-line no-console
-        console.log('fetchUserTopArtists result:', artistsData);
-        // eslint-disable-next-line no-console
-        console.log('first artist (if present):', artistsData?.items?.[0] ?? null);
-        // eslint-disable-next-line no-console
-        console.log('fetchUserTopTracks result:', tracksData);
-        // eslint-disable-next-line no-console
-        console.log('first track (if present):', tracksData?.items?.[0] ?? null);
-
-        if (!artistsData) throw new Error('Empty response from fetchUserTopArtists');
-        if (!tracksData) throw new Error('Empty response from fetchUserTopTracks');
-
-        if (artistsData.error) throw new Error(typeof artistsData.error === 'string' ? artistsData.error : JSON.stringify(artistsData.error));
-        if (tracksData.error) throw new Error(typeof tracksData.error === 'string' ? tracksData.error : JSON.stringify(tracksData.error));
-
-        setTopArtists(artistsData);
-        setTopTracks(tracksData);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err?.message ?? String(err));
-        // eslint-disable-next-line no-console
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // fetch tracks
+      (async () => {
+        try {
+          const res = await fetchUserTopTracks(token);
+          if (cancelled) return;
+          const data = res?.data ?? res;
+          if (!data) {
+            setErrorTracks('Empty response from fetchUserTopTracks');
+          } else if (data.error) {
+            const msg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+            setErrorTracks(msg);
+            if (msg.toLowerCase().includes('access token')) navigate('/login');
+          } else {
+            setTopTracks(data);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          setErrorTracks(err?.message ?? String(err));
+        } finally {
+          if (!cancelled) setLoadingTracks(false);
+        }
+      })();
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [navigate]);
 
   const topArtist = topArtists?.items?.[0] ?? null;
   const topTrack = topTracks?.items?.[0] ?? null;
 
-  if (loading) return <div className="dashboard-loading" data-testid="loading">Loading…</div>;
-  if (error) return (
-    <div className="dashboard-error" role="alert">
-      {error} {error?.toLowerCase().includes('login') && <Link to="/login">Se connecter</Link>}
-    </div>
-  );
+  // Loading indicators required by tests
+  if (loadingArtists || loadingTracks) {
+    return (
+      <div className="dashboard-loading" data-testid="loading">
+        <div data-testid="loading-artists-indicator">Loading artists…</div>
+        <div data-testid="loading-tracks-indicator">Loading tracks…</div>
+      </div>
+    );
+  }
 
-  const artistSubtitle = topArtist
-    ? (Array.isArray(topArtist.genres) && topArtist.genres.length ? topArtist.genres.join(', ') : `Followers: ${topArtist.followers?.total ?? '—'}`)
-    : '';
-
-  const trackSubtitle = topTrack
-    ? (Array.isArray(topTrack.artists) ? topTrack.artists.map(a => a.name).join(', ') : '')
-    : '';
+  // Error blocks with specific data-testid required by tests
+  if (errorArtists || errorTracks) {
+    return (
+      <div className="dashboard-error" role="alert">
+        {errorArtists ? <div data-testid="error-artists-indicator">{errorArtists}</div> : null}
+        {errorTracks ? <div data-testid="error-tracks-indicator">{errorTracks}</div> : null}
+        {(String(errorArtists || errorTracks).toLowerCase().includes('login') ||
+          String(errorArtists || errorTracks).toLowerCase().includes('access token')) && (
+          <p><Link to="/login">Se connecter</Link></p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
@@ -90,7 +119,7 @@ export default function Dashboard() {
       <p className="dashboard-subtitle">Your top artist and track</p>
 
       <section className="dashboard-content" aria-labelledby="top-artist-title">
-        <div className="card">
+        <div className="card" aria-live="polite">
           <h2 id="top-artist-title">Artiste le plus écouté</h2>
           {!topArtist ? (
             <p>Aucun artiste trouvé.</p>
@@ -98,13 +127,13 @@ export default function Dashboard() {
             <SimpleCard
               imageUrl={topArtist.images?.[0]?.url}
               title={topArtist.name}
-              subtitle={artistSubtitle}
+              subtitle={Array.isArray(topArtist.genres) && topArtist.genres.length ? topArtist.genres.join(', ') : `Followers: ${topArtist.followers?.total ?? '—'}`}
               link={topArtist.external_urls?.spotify}
             />
           )}
         </div>
 
-        <div className="card">
+        <div className="card" aria-live="polite">
           <h2 id="top-track-title">Titre le plus écouté</h2>
           {!topTrack ? (
             <p>Aucun titre trouvé.</p>
@@ -112,14 +141,12 @@ export default function Dashboard() {
             <SimpleCard
               imageUrl={topTrack.album?.images?.[0]?.url}
               title={topTrack.name}
-              subtitle={`${trackSubtitle}${topTrack.album?.name ? ' — ' + topTrack.album.name : ''}`}
+              subtitle={`${Array.isArray(topTrack.artists) ? topTrack.artists.map(a => a.name).join(', ') : ''}${topTrack.album?.name ? ' — ' + topTrack.album.name : ''}`}
               link={topTrack.external_urls?.spotify}
             />
           )}
         </div>
       </section>
-
-
     </div>
   );
 }
