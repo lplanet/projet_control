@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me';
-import { useRequireToken } from '../../hooks/useRequireToken';
+import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me.js';
+import { useRequireToken } from '../../hooks/useRequireToken.js';
 import SimpleCard from '../../components/SimpleCard/SimpleCard.jsx';
 import './DashboardPage.css';
 
